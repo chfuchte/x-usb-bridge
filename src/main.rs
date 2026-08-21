@@ -1,28 +1,42 @@
 mod audio;
 mod cli;
+mod pipe;
 mod web;
 mod x32;
 
 use anyhow::{Ok, Result};
 
-use crate::cli::Mode;
+use crate::{cli::Mode, pipe::run_pipe, web::run_web_server};
 
-fn main() -> Result<()> {
-    tracing_subscriber::fmt().finish();
+#[tokio::main]
+async fn main() -> Result<()> {
+    tracing_subscriber::fmt()
+        .with_ansi(true)
+        .with_max_level(tracing::Level::DEBUG)
+        .init();
 
-    let _args = match cli::parse()? {
+    match cli::parse()? {
         Mode::ShowLicense => {
             print_license();
-            return Ok(());
+
+            Ok(())
         }
         Mode::ShowVersion => {
             print_version();
-            return Ok(());
-        }
-        Mode::Run(args) => args,
-    };
 
-    Ok(())
+            Ok(())
+        }
+        Mode::Serve(args) => {
+            run_web_server(args.port()).await?;
+
+            Ok(())
+        }
+        Mode::Pipe(args) => {
+            run_pipe(args.timeout())?;
+
+            Ok(())
+        }
+    }
 }
 
 fn print_license() {
